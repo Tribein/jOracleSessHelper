@@ -80,7 +80,7 @@ public class OraLDAP {
             return null;
         }
         if ( ! result.isEmpty() ) {
-            Pattern pattern = Pattern.compile("host=([A-Za-z0-9\\.\\-\\_]*)");
+            Pattern pattern = Pattern.compile("host=([A-Za-z0-9\\.\\-\\_]*)",Pattern.CASE_INSENSITIVE);
             tnslines = new HashMap<>();
             Set<String> keys = result.keySet();
             for (String k : keys){

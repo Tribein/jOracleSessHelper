@@ -9,50 +9,62 @@ import javax.swing.event.ListSelectionEvent;
 import javax.swing.event.ListSelectionListener;
 import java.util.Map;
 import java.util.TreeMap;
+import javax.swing.event.RowSorterEvent;
+import javax.swing.event.RowSorterListener;
+import javax.swing.table.TableModel;
+import javax.swing.table.TableRowSorter;
+import java.util.Comparator;
+
 /**
  *
+ * @author Tribein
  */
 public class MainForm extends javax.swing.JFrame {
 
     OraDB myjdb;
-    OraLDAP   myldap;
+    OraLDAP myldap;
     javax.swing.table.DefaultTableModel maintblmodel;
-    javax.swing.table.DefaultTableModel [] minortblmodel;
+    javax.swing.table.DefaultTableModel[] minortblmodel;
     boolean minortblrefreshed;
-    Map<String,String> myldaplist;
-    
+    Map<String, String> myldaplist;
+    Map<String, String> myldapport;
+    Map<String, String> myldapservice;
+
     /**
      * Creates new form MainForm
      */
     public MainForm() {
-        
-        this.minortblmodel = new javax.swing.table.DefaultTableModel[15];    
+
+        this.minortblmodel = new javax.swing.table.DefaultTableModel[15];
         this.myjdb = new OraDB();
         this.myldap = new OraLDAP();
         this.myldaplist = new TreeMap<>();
-        //
-        if(myldap.initmyldap(null) == 0){
-            
-            myldaplist = myldap.gettnsrecs();
+        this.myldapport = new TreeMap<>();
+        this.myldapservice = new TreeMap<>();
+
+        initComponents();
+
+        //Initialize LDAP
+        if (this.myldap.initmyldap("ldaphost.example.org"/*host*/,"389"/*port*/) == 0) {
+
+            this.myldaplist = myldap.gettnsrecs();
+            this.myldapport = myldap.gettnsports();
+            this.myldapservice = myldap.gettnsservices();
         }
         //
-        
-        initComponents();
-        
-        //
-        if(!myldaplist.isEmpty()){
-            for ( Map.Entry<String, String> k : myldaplist.entrySet()){
-                this.jComboBox1.addItem(k.getKey());
-            }
-            //myldaplist.entrySet().stream().forEach((k) -> {this.jComboBox1.addItem(k.getKey());});
+        if (!myldaplist.isEmpty()) {
+            for(Map.Entry<String, String> k : this.myldaplist.entrySet()){
+                jComboBox1.addItem(k.getKey());
+            }                    
         }
         //
         jTextField1.setText(this.myjdb.dbhost);
-        jTextField2.setText(this.myjdb.dbsid);
+        jTextField2.setText(this.myjdb.dbsrv);
         jTextField3.setText(this.myjdb.dbusername);
-        jTextField4.setText(this.myjdb.dbpassword);  
+        jTextField4.setText(this.myjdb.dbpassword);
+        jTextField5.setText(this.myjdb.dbport);
         //
-        this.maintblmodel     = (javax.swing.table.DefaultTableModel) jTable1.getModel();
+        this.maintblmodel = (javax.swing.table.DefaultTableModel) jTable1.getModel();
         this.minortblmodel[0] = (javax.swing.table.DefaultTableModel) jTable2.getModel();
         this.minortblmodel[1] = (javax.swing.table.DefaultTableModel) jTable3.getModel();
         this.minortblmodel[2] = (javax.swing.table.DefaultTableModel) jTable4.getModel();
@@ -61,14 +73,13 @@ public class MainForm extends javax.swing.JFrame {
         this.minortblmodel[5] = (javax.swing.table.DefaultTableModel) jTable7.getModel();
         this.minortblmodel[6] = (javax.swing.table.DefaultTableModel) jTable8.getModel();
         this.minortblmodel[7] = (javax.swing.table.DefaultTableModel) jTable9.getModel();
-        this.minortblmodel[8] = (javax.swing.table.DefaultTableModel) jTable10.getModel();        
-        this.minortblmodel[9] = (javax.swing.table.DefaultTableModel) jTable11.getModel();        
-        this.minortblmodel[10] = (javax.swing.table.DefaultTableModel) jTable12.getModel();        
-        this.minortblmodel[11] = (javax.swing.table.DefaultTableModel) jTable13.getModel();        
-        this.minortblmodel[12] = (javax.swing.table.DefaultTableModel) jTable14.getModel();        
-        this.minortblmodel[13] = (javax.swing.table.DefaultTableModel) jTable15.getModel();        
-        this.minortblmodel[14] = (javax.swing.table.DefaultTableModel) jTable16.getModel();        
-        //this.minortblmodel[15] = (javax.swing.table.DefaultTableModel) jTable17.getModel();        
+        this.minortblmodel[8] = (javax.swing.table.DefaultTableModel) jTable10.getModel();
+        this.minortblmodel[9] = (javax.swing.table.DefaultTableModel) jTable11.getModel();
+        this.minortblmodel[10] = (javax.swing.table.DefaultTableModel) jTable12.getModel();
+        this.minortblmodel[11] = (javax.swing.table.DefaultTableModel) jTable13.getModel();
+        this.minortblmodel[12] = (javax.swing.table.DefaultTableModel) jTable14.getModel();
+        this.minortblmodel[13] = (javax.swing.table.DefaultTableModel) jTable15.getModel();
+        this.minortblmodel[14] = (javax.swing.table.DefaultTableModel) jTable16.getModel();
         //
         jTable1.getSelectionModel().addListSelectionListener(new ListSelectionListener() {
 
@@ -76,7 +87,76 @@ public class MainForm extends javax.swing.JFrame {
             public void valueChanged(ListSelectionEvent lse) {
                 //throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
                 wrapfillminortbl();
-                minortblrefreshed=true;
+                minortblrefreshed = true;
+            }
+        });
+        //
+        //ENABLE SORTING
+        jTable1.setAutoCreateRowSorter(true);
+        TableRowSorter<TableModel> sorter = new TableRowSorter<>(jTable1.getModel());
+        jTable1.setRowSorter(sorter);
+        //LISTEN TO SORTING EVENTS
+        sorter.addRowSorterListener(new RowSorterListener() {
+
+            @Override
+            public void sorterChanged(RowSorterEvent evt) {
+            }
+        });
+        //SPECIFY COMPARATOR FOR SORTING A SPECIFIC COLUMN
+        //ROWNUM
+        sorter.setComparator(0, new Comparator<Integer>() {
+            @Override
+            public int compare(Integer val1, Integer val2) {
+                return val1.compareTo(val2);
+            }
+        });
+        //INST_ID
+        sorter.setComparator(1, new Comparator<Integer>() {
+            @Override
+            public int compare(Integer val1, Integer val2) {
+                return val1.compareTo(val2);
+            }
+        });
+        //SID
+        sorter.setComparator(2, new Comparator<String>() {
+            @Override
+            public int compare(String val1, String val2) {
+                return ((Integer.parseInt(val1.trim()) < Integer.parseInt(val2.trim()))? -1 : 1);
+            }
+        }); 
+        //SERIAL
+        sorter.setComparator(3, new Comparator<Integer>() {
+            @Override
+            public int compare(Integer val1, Integer val2) {
+                return val1.compareTo(val2);
+            }
+        });        
+        //SECONDS
+        sorter.setComparator(12, new Comparator<Float>() {
+            @Override
+            public int compare(Float val1, Float val2) {
+                return val1.compareTo(val2);
+            }
+        });
+        //PGA_USED_MEM
+        sorter.setComparator(13, new Comparator<Float>() {
+            @Override
+            public int compare(Float val1, Float val2) {
+                return val1.compareTo(val2);
+            }
+        });
+        //PGA_ALLOC_MEM
+        sorter.setComparator(14, new Comparator<Float>() {
+            @Override
+            public int compare(Float val1, Float val2) {
+                return val1.compareTo(val2);
+            }
+        });
+        //PGA_MAX_MEM
+        sorter.setComparator(15, new Comparator<Float>() {
+            @Override
+            public int compare(Float val1, Float val2) {
+                return val1.compareTo(val2);
             }
         });
         //
@@ -99,11 +179,16 @@ public class MainForm extends javax.swing.JFrame {
         jLabel3 = new javax.swing.JLabel();
         jTextField4 = new javax.swing.JTextField();
         jLabel4 = new javax.swing.JLabel();
+        jButton1 = new javax.swing.JButton();
+        jComboBox1 = new javax.swing.JComboBox();
+        jTextField5 = new javax.swing.JTextField();
+        jLabel5 = new javax.swing.JLabel();
+        jSplitPane2 = new javax.swing.JSplitPane();
         jPanel1 = new javax.swing.JPanel();
         jScrollPane1 = new javax.swing.JScrollPane();
         jTable1 = new javax.swing.JTable();
-        jPanel2 = new javax.swing.JPanel();
-        jButton2 = new javax.swing.JButton();
+        jPanel3 = new javax.swing.JPanel();
+        jScrollPane17 = new javax.swing.JScrollPane();
         jTabbedPane1 = new javax.swing.JTabbedPane();
         jScrollPane2 = new javax.swing.JScrollPane();
         jTable2 = new javax.swing.JTable();
@@ -137,11 +222,10 @@ public class MainForm extends javax.swing.JFrame {
         jTable16 = new javax.swing.JTable();
         jScrollPane18 = new javax.swing.JScrollPane();
         jTextArea1 = new javax.swing.JTextArea();
-        jButton1 = new javax.swing.JButton();
-        jComboBox1 = new javax.swing.JComboBox();
+        jButton2 = new javax.swing.JButton();
 
         setDefaultCloseOperation(javax.swing.WindowConstants.EXIT_ON_CLOSE);
-        setTitle("MainForm");
+        setTitle("ODBH");
         addComponentListener(new java.awt.event.ComponentAdapter() {
             public void componentShown(java.awt.event.ComponentEvent evt) {
                 formComponentShown(evt);
@@ -168,20 +252,43 @@ public class MainForm extends javax.swing.JFrame {
         jLabel4.setFont(new java.awt.Font("Tahoma", 0, 12)); // NOI18N
         jLabel4.setText("Пароль");
 
+        jButton1.setFont(new java.awt.Font("Tahoma", 0, 12)); // NOI18N
+        jButton1.setText("Scan");
+        jButton1.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                jButton1ActionPerformed(evt);
+            }
+        });
+
+        jComboBox1.setFont(new java.awt.Font("Tahoma", 0, 12)); // NOI18N
+        jComboBox1.setMaximumRowCount(32);
+        jComboBox1.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                jComboBox1ActionPerformed(evt);
+            }
+        });
+
+        jTextField5.setFont(new java.awt.Font("Tahoma", 0, 12)); // NOI18N
+
+        jLabel5.setFont(new java.awt.Font("Tahoma", 0, 12)); // NOI18N
+        jLabel5.setText("Порт");
+
+        jSplitPane2.setOrientation(javax.swing.JSplitPane.VERTICAL_SPLIT);
+
         jTable1.setFont(new java.awt.Font("Courier New", 0, 12)); // NOI18N
         jTable1.setModel(new javax.swing.table.DefaultTableModel(
             new Object [][] {
 
             },
             new String [] {
-                "I", "SID", "SERIAL", "STATUS", "USERNAME", "PROCESS", "MODULE", "MACHINE", "LOGON TIME", "STATE", "EVENT", "SECONDS", "OSPID", "RMPID", "PGA_USED", "PGA_ALLOC", "PGA_MAX", "TYPE", "SERVICE NAME", "SERVER", "ORAPID", "PSERIAL"
+                "#", "I", "SID", "SERIAL", "STATUS", "USERNAME", "PROCESS", "MODULE", "MACHINE", "LOGON TIME", "STATE", "EVENT", "SECONDS", "PGA_USED", "PGA_ALLOC", "PGA_MAX", "TYPE"
             }
         ) {
             Class[] types = new Class [] {
-                java.lang.Integer.class, java.lang.String.class, java.lang.Integer.class, java.lang.String.class, java.lang.String.class, java.lang.String.class, java.lang.String.class, java.lang.String.class, java.lang.String.class, java.lang.String.class, java.lang.String.class, java.lang.Long.class, java.lang.Integer.class, java.lang.Integer.class, java.lang.Long.class, java.lang.Long.class, java.lang.Long.class, java.lang.String.class, java.lang.String.class, java.lang.String.class, java.lang.String.class, java.lang.String.class
+                java.lang.Integer.class, java.lang.Integer.class, java.lang.String.class, java.lang.Integer.class, java.lang.String.class, java.lang.String.class, java.lang.String.class, java.lang.String.class, java.lang.String.class, java.lang.String.class, java.lang.String.class, java.lang.String.class, java.lang.String.class, java.lang.String.class, java.lang.String.class, java.lang.String.class, java.lang.String.class
             };
             boolean[] canEdit = new boolean [] {
-                false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, true, false
+                false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false
             };
 
             public Class getColumnClass(int columnIndex) {
@@ -205,41 +312,24 @@ public class MainForm extends javax.swing.JFrame {
         jPanel1.setLayout(jPanel1Layout);
         jPanel1Layout.setHorizontalGroup(
             jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addComponent(jScrollPane1, javax.swing.GroupLayout.Alignment.TRAILING)
+            .addGap(0, 1452, Short.MAX_VALUE)
+            .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                .addComponent(jScrollPane1, javax.swing.GroupLayout.DEFAULT_SIZE, 1452, Short.MAX_VALUE))
         );
         jPanel1Layout.setVerticalGroup(
             jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGroup(jPanel1Layout.createSequentialGroup()
-                .addComponent(jScrollPane1, javax.swing.GroupLayout.DEFAULT_SIZE, 454, Short.MAX_VALUE)
-                .addGap(0, 0, 0))
+            .addGap(0, 429, Short.MAX_VALUE)
+            .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                .addComponent(jScrollPane1, javax.swing.GroupLayout.Alignment.TRAILING, javax.swing.GroupLayout.DEFAULT_SIZE, 429, Short.MAX_VALUE))
         );
 
-        jButton2.setFont(new java.awt.Font("Tahoma", 0, 14)); // NOI18N
-        jButton2.setText("®");
-        jButton2.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                jButton2ActionPerformed(evt);
+        jSplitPane2.setLeftComponent(jPanel1);
+
+        jTabbedPane1.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseClicked(java.awt.event.MouseEvent evt) {
+                jTabbedPane1MouseClicked(evt);
             }
         });
-
-        javax.swing.GroupLayout jPanel2Layout = new javax.swing.GroupLayout(jPanel2);
-        jPanel2.setLayout(jPanel2Layout);
-        jPanel2Layout.setHorizontalGroup(
-            jPanel2Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, jPanel2Layout.createSequentialGroup()
-                .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-                .addComponent(jButton2, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-                .addContainerGap())
-        );
-        jPanel2Layout.setVerticalGroup(
-            jPanel2Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGroup(jPanel2Layout.createSequentialGroup()
-                .addComponent(jButton2, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-                .addGap(0, 11, Short.MAX_VALUE))
-        );
-
-        jButton2.getAccessibleContext().setAccessibleName("jBRefresh");
-        jButton2.getAccessibleContext().setAccessibleDescription("");
 
         jScrollPane2.addComponentListener(new java.awt.event.ComponentAdapter() {
             public void componentShown(java.awt.event.ComponentEvent evt) {
@@ -305,7 +395,9 @@ public class MainForm extends javax.swing.JFrame {
                 return canEdit [columnIndex];
             }
         });
+        jTable3.setColumnSelectionAllowed(true);
         jScrollPane3.setViewportView(jTable3);
+        jTable3.getColumnModel().getSelectionModel().setSelectionMode(javax.swing.ListSelectionModel.MULTIPLE_INTERVAL_SELECTION);
 
         jTabbedPane1.addTab("EVENTS", jScrollPane3);
 
@@ -339,7 +431,9 @@ public class MainForm extends javax.swing.JFrame {
                 return canEdit [columnIndex];
             }
         });
+        jTable4.setColumnSelectionAllowed(true);
         jScrollPane4.setViewportView(jTable4);
+        jTable4.getColumnModel().getSelectionModel().setSelectionMode(javax.swing.ListSelectionModel.MULTIPLE_INTERVAL_SELECTION);
 
         jTabbedPane1.addTab("STATS", jScrollPane4);
 
@@ -355,14 +449,14 @@ public class MainForm extends javax.swing.JFrame {
 
             },
             new String [] {
-                "COMMAND", "TIME", "PROGRAM", "MODULE", "ACTION", "TRACE", "TRACE WAITS", "TRACE BINDS", "PARALLEL DDL", "PARALLEL DML", "PARALLEL QUERY", "TRACEFILE"
+                "COMMAND", "TIME", "PROGRAM", "OSPID", "RMPID", "RESOURCE GROUP", "ACTION", "PLSQL ENTRY OBJECT", "PLSQL OBJECT", "ENTRY SUBPROGRAM", "SUBPROGRAM", "TRACE", "TRACE WAITS", "TRACE BINDS", "PARALLEL DDL", "PARALLEL DML", "PARALLEL QUERY", "TRACEFILE", "SERVICE_NAME", "SERVICE"
             }
         ) {
             Class[] types = new Class [] {
-                java.lang.String.class, java.lang.String.class, java.lang.String.class, java.lang.String.class, java.lang.String.class, java.lang.String.class, java.lang.String.class, java.lang.String.class, java.lang.String.class, java.lang.String.class, java.lang.String.class, java.lang.String.class
+                java.lang.String.class, java.lang.String.class, java.lang.String.class, java.lang.String.class, java.lang.String.class, java.lang.String.class, java.lang.String.class, java.lang.String.class, java.lang.String.class, java.lang.String.class, java.lang.String.class, java.lang.String.class, java.lang.String.class, java.lang.String.class, java.lang.String.class, java.lang.String.class, java.lang.String.class, java.lang.String.class, java.lang.String.class, java.lang.String.class
             };
             boolean[] canEdit = new boolean [] {
-                false, false, false, false, false, false, false, false, false, false, true, false
+                false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false
             };
 
             public Class getColumnClass(int columnIndex) {
@@ -373,7 +467,9 @@ public class MainForm extends javax.swing.JFrame {
                 return canEdit [columnIndex];
             }
         });
+        jTable5.setColumnSelectionAllowed(true);
         jScrollPane5.setViewportView(jTable5);
+        jTable5.getColumnModel().getSelectionModel().setSelectionMode(javax.swing.ListSelectionModel.SINGLE_SELECTION);
 
         jTabbedPane1.addTab("APP", jScrollPane5);
 
@@ -503,7 +599,9 @@ public class MainForm extends javax.swing.JFrame {
                 return canEdit [columnIndex];
             }
         });
+        jTable9.setColumnSelectionAllowed(true);
         jScrollPane9.setViewportView(jTable9);
+        jTable9.getColumnModel().getSelectionModel().setSelectionMode(javax.swing.ListSelectionModel.SINGLE_SELECTION);
         if (jTable9.getColumnModel().getColumnCount() > 0) {
             jTable9.getColumnModel().getColumn(0).setResizable(false);
         }
@@ -540,7 +638,9 @@ public class MainForm extends javax.swing.JFrame {
                 return canEdit [columnIndex];
             }
         });
+        jTable10.setColumnSelectionAllowed(true);
         jScrollPane10.setViewportView(jTable10);
+        jTable10.getColumnModel().getSelectionModel().setSelectionMode(javax.swing.ListSelectionModel.MULTIPLE_INTERVAL_SELECTION);
 
         jTabbedPane1.addTab("PLAN", jScrollPane10);
 
@@ -574,7 +674,9 @@ public class MainForm extends javax.swing.JFrame {
                 return canEdit [columnIndex];
             }
         });
+        jTable11.setColumnSelectionAllowed(true);
         jScrollPane11.setViewportView(jTable11);
+        jTable11.getColumnModel().getSelectionModel().setSelectionMode(javax.swing.ListSelectionModel.MULTIPLE_INTERVAL_SELECTION);
 
         jTabbedPane1.addTab("BINDS", jScrollPane11);
 
@@ -624,7 +726,7 @@ public class MainForm extends javax.swing.JFrame {
 
             },
             new String [] {
-                "INSTANCE", "TYPE", "DESCRIPTION", "LOCK MODE", "TIME", "BLOCK MODE", "REQUEST"
+                "ID", "OWNER / LOCK", "OBJECT / DESCRIPTION", "OBJECT TYPE / TIME", "FILE NAME / LOCKED MODE", "WAIT ROW / BLOCK MODE", "ROW ID / REQUEST MODE"
             }
         ) {
             Class[] types = new Class [] {
@@ -642,7 +744,9 @@ public class MainForm extends javax.swing.JFrame {
                 return canEdit [columnIndex];
             }
         });
+        jTable13.setColumnSelectionAllowed(true);
         jScrollPane13.setViewportView(jTable13);
+        jTable13.getColumnModel().getSelectionModel().setSelectionMode(javax.swing.ListSelectionModel.MULTIPLE_INTERVAL_SELECTION);
 
         jTabbedPane1.addTab("LOCKS", jScrollPane13);
 
@@ -676,7 +780,9 @@ public class MainForm extends javax.swing.JFrame {
                 return canEdit [columnIndex];
             }
         });
+        jTable14.setColumnSelectionAllowed(true);
         jScrollPane14.setViewportView(jTable14);
+        jTable14.getColumnModel().getSelectionModel().setSelectionMode(javax.swing.ListSelectionModel.MULTIPLE_INTERVAL_SELECTION);
 
         jTabbedPane1.addTab("PQ", jScrollPane14);
 
@@ -755,19 +861,31 @@ public class MainForm extends javax.swing.JFrame {
 
         jTabbedPane1.addTab("SQLMON", jScrollPane18);
 
-        jButton1.setFont(new java.awt.Font("Tahoma", 0, 12)); // NOI18N
-        jButton1.setText("Пуск");
-        jButton1.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                jButton1ActionPerformed(evt);
-            }
-        });
+        jScrollPane17.setViewportView(jTabbedPane1);
+        jTabbedPane1.getAccessibleContext().setAccessibleName("WAITS");
 
-        jComboBox1.setFont(new java.awt.Font("Tahoma", 0, 12)); // NOI18N
-        jComboBox1.setMaximumRowCount(32);
-        jComboBox1.addActionListener(new java.awt.event.ActionListener() {
+        javax.swing.GroupLayout jPanel3Layout = new javax.swing.GroupLayout(jPanel3);
+        jPanel3.setLayout(jPanel3Layout);
+        jPanel3Layout.setHorizontalGroup(
+            jPanel3Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGap(0, 1452, Short.MAX_VALUE)
+            .addGroup(jPanel3Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                .addComponent(jScrollPane17, javax.swing.GroupLayout.DEFAULT_SIZE, 1452, Short.MAX_VALUE))
+        );
+        jPanel3Layout.setVerticalGroup(
+            jPanel3Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGap(0, 466, Short.MAX_VALUE)
+            .addGroup(jPanel3Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                .addComponent(jScrollPane17, javax.swing.GroupLayout.Alignment.TRAILING, javax.swing.GroupLayout.DEFAULT_SIZE, 466, Short.MAX_VALUE))
+        );
+
+        jSplitPane2.setRightComponent(jPanel3);
+
+        jButton2.setFont(new java.awt.Font("Tahoma", 0, 14)); // NOI18N
+        jButton2.setText("®");
+        jButton2.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
-                jComboBox1ActionPerformed(evt);
+                jButton2ActionPerformed(evt);
             }
         });
 
@@ -776,36 +894,40 @@ public class MainForm extends javax.swing.JFrame {
         layout.setHorizontalGroup(
             layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
             .addGroup(layout.createSequentialGroup()
-                .addGap(31, 31, 31)
+                .addGap(17, 17, 17)
                 .addComponent(jLabel2)
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
                 .addComponent(jTextField1, javax.swing.GroupLayout.PREFERRED_SIZE, 228, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addGap(18, 18, 18)
+                .addGap(27, 27, 27)
                 .addComponent(jLabel1)
-                .addGap(18, 18, 18)
-                .addComponent(jTextField2, javax.swing.GroupLayout.PREFERRED_SIZE, 64, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addGap(18, 18, 18)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
+                .addComponent(jTextField2, javax.swing.GroupLayout.PREFERRED_SIZE, 98, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addGap(31, 31, 31)
+                .addComponent(jLabel5)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
+                .addComponent(jTextField5, javax.swing.GroupLayout.PREFERRED_SIZE, 48, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
                 .addComponent(jLabel3)
-                .addGap(18, 18, 18)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
                 .addComponent(jTextField3, javax.swing.GroupLayout.PREFERRED_SIZE, 64, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addGap(18, 18, 18)
+                .addGap(41, 41, 41)
                 .addComponent(jLabel4)
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
                 .addComponent(jTextField4, javax.swing.GroupLayout.PREFERRED_SIZE, 64, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addGap(18, 18, 18)
-                .addComponent(jComboBox1, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
-                .addComponent(jButton1)
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, 298, Short.MAX_VALUE)
-                .addComponent(jPanel2, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
-            .addComponent(jPanel1, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-            .addComponent(jTabbedPane1)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                .addComponent(jComboBox1, 0, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                .addComponent(jButton1, javax.swing.GroupLayout.PREFERRED_SIZE, 64, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                .addComponent(jButton2)
+                .addContainerGap())
+            .addComponent(jSplitPane2)
         );
         layout.setVerticalGroup(
             layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
             .addGroup(layout.createSequentialGroup()
                 .addContainerGap()
-                .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
                     .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
                         .addComponent(jTextField1, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
                         .addComponent(jLabel2)
@@ -815,104 +937,103 @@ public class MainForm extends javax.swing.JFrame {
                         .addComponent(jLabel3)
                         .addComponent(jTextField4, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
                         .addComponent(jLabel4)
-                        .addComponent(jButton1)
+                        .addComponent(jTextField5, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                        .addComponent(jLabel5)
                         .addComponent(jComboBox1, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
-                    .addComponent(jPanel2, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
-                .addGap(18, 18, 18)
-                .addComponent(jPanel1, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
-                .addComponent(jTabbedPane1, javax.swing.GroupLayout.DEFAULT_SIZE, 335, Short.MAX_VALUE)
-                .addContainerGap())
+                    .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                        .addComponent(jButton2, javax.swing.GroupLayout.PREFERRED_SIZE, 25, Short.MAX_VALUE)
+                        .addComponent(jButton1)))
+                .addGap(30, 30, 30)
+                .addComponent(jSplitPane2))
         );
 
-        jTabbedPane1.getAccessibleContext().setAccessibleName("WAITS");
+        jButton2.getAccessibleContext().setAccessibleName("jBRefresh");
+        jButton2.getAccessibleContext().setAccessibleDescription("");
 
         pack();
     }// </editor-fold>//GEN-END:initComponents
-    
-    private void wrapfillminortbl(){
+
+    private void wrapfillminortbl() {
         int selectedrownum = jTable1.getSelectedRow();
-        if(selectedrownum>=0){
-            int [] vals = {
-                Integer.parseInt(jTable1.getModel().getValueAt(selectedrownum,0).toString().trim()),
-                Integer.parseInt(jTable1.getModel().getValueAt(selectedrownum,1).toString().trim()),
-                Integer.parseInt(jTable1.getModel().getValueAt(selectedrownum,2).toString().trim()),
-                Integer.parseInt(jTable1.getModel().getValueAt(selectedrownum,20).toString().trim()),
-                Integer.parseInt(jTable1.getModel().getValueAt(selectedrownum,21).toString().trim())
+        if (selectedrownum >= 0) {
+            int[] vals = {
+                Integer.parseInt(jTable1.getModel().getValueAt(selectedrownum, 1).toString().trim()),
+                Integer.parseInt(jTable1.getModel().getValueAt(selectedrownum, 2).toString().trim()),
+                Integer.parseInt(jTable1.getModel().getValueAt(selectedrownum, 3).toString().trim())
             };
-            fillminortbl(jTabbedPane1.getSelectedIndex(),vals);
-        }        
+            fillminortbl(jTabbedPane1.getSelectedIndex(), vals);
+        }
     }
 
-    private void fillmaintbl(){
+    private void fillmaintbl() {
         int mytblrowscount;
         Object[][] result;
         mytblrowscount = maintblmodel.getRowCount();
-        for(int i=mytblrowscount-1; i>=0; i--){
+        for (int i = mytblrowscount - 1; i >= 0; i--) {
             maintblmodel.removeRow(i);
-        }        
+        }
         result = myjdb.mainquery();
         for (Object[] result1 : result) {
-            maintblmodel.addRow( result1 );
+            maintblmodel.addRow(result1);
         }
     }
-    private void fillminortbl(int tabid, int [] inp){
+
+    private void fillminortbl(int tabid, int[] inp) {
         int mytblrowscount;
         Object[][] result;
-        
-        switch(tabid){
+
+        switch (tabid) {
             case 15:
                 jTextArea1.setText("");
                 break;
             default:
-            mytblrowscount = minortblmodel[tabid].getRowCount();
-            for(int i=mytblrowscount-1; i>=0; i--){
-                minortblmodel[tabid].removeRow(i);
-            }
-            break;
+                mytblrowscount = minortblmodel[tabid].getRowCount();
+                for (int i = mytblrowscount - 1; i >= 0; i--) {
+                    minortblmodel[tabid].removeRow(i);
+                }
+                break;
         }
-        result = myjdb.minorquery(tabid,inp);
-        if(result != null){
+        result = myjdb.minorquery(tabid, inp);
+        if (result != null) {
             for (Object[] r : result) {
-                switch(tabid){
-                    case 15:
+                switch (tabid) {
+                    case 15://SQLMONITOR
                         jTextArea1.setText(r[0].toString());
                         break;
                     default:
-                        minortblmodel[tabid].addRow( r );
+                        minortblmodel[tabid].addRow(r);
                         break;
                 }
             }
         }
-    }    
+    }
+
     private void jButton1ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButton1ActionPerformed
-        if(myjdb.initmyjdb(jTextField1.getText(),jTextField2.getText(),jTextField3.getText(),jTextField4.getText())==0){
-            fillmaintbl();        
+        if (myjdb.initmyjdb(jTextField1.getText(), jTextField2.getText(), jTextField3.getText(), jTextField4.getText(), jTextField5.getText()) == 0) {
+            fillmaintbl();
         }
     }//GEN-LAST:event_jButton1ActionPerformed
 
     private void jTable1MouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_jTable1MouseClicked
-        if(minortblrefreshed){
-            minortblrefreshed=false;
-        } else{
-            wrapfillminortbl();    
+        if (minortblrefreshed) {
+            minortblrefreshed = false;
+        } else {
+            wrapfillminortbl();
         }
     }//GEN-LAST:event_jTable1MouseClicked
 
     private void jButton2ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButton2ActionPerformed
-        
+
         int tabid = jTabbedPane1.getSelectedIndex();
-        int selectedrownum = jTable1.getSelectedRow();        
+        int selectedrownum = jTable1.getSelectedRow();
         fillmaintbl();
-        if(selectedrownum>=0){
-            int [] vals = {
-                Integer.parseInt(jTable1.getModel().getValueAt(selectedrownum,0).toString().trim()),
-                Integer.parseInt(jTable1.getModel().getValueAt(selectedrownum,1).toString().trim()),
-                Integer.parseInt(jTable1.getModel().getValueAt(selectedrownum,2).toString().trim()),
-                Integer.parseInt(jTable1.getModel().getValueAt(selectedrownum,20).toString().trim()),
-                Integer.parseInt(jTable1.getModel().getValueAt(selectedrownum,21).toString().trim())
-                };            
-            fillminortbl(tabid,vals);
+        if (selectedrownum >= 0) {
+            int[] vals = {
+                Integer.parseInt(jTable1.getModel().getValueAt(selectedrownum, 0).toString().trim()),
+                Integer.parseInt(jTable1.getModel().getValueAt(selectedrownum, 1).toString().trim()),
+                Integer.parseInt(jTable1.getModel().getValueAt(selectedrownum, 2).toString().trim())
+            };
+            fillminortbl(tabid, vals);
         }
     }//GEN-LAST:event_jButton2ActionPerformed
 
@@ -921,8 +1042,9 @@ public class MainForm extends javax.swing.JFrame {
     }//GEN-LAST:event_formComponentShown
 
     private void jComboBox1ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jComboBox1ActionPerformed
-        jTextField2.setText(jComboBox1.getSelectedItem().toString());
-        jTextField1.setText(myldaplist.get(jComboBox1.getSelectedItem().toString()));
+        jTextField1.setText(this.myldaplist.get(jComboBox1.getSelectedItem().toString()));
+        jTextField2.setText(this.myldapservice.get(jComboBox1.getSelectedItem().toString()));        
+        jTextField5.setText(this.myldapport.get(jComboBox1.getSelectedItem().toString()));
     }//GEN-LAST:event_jComboBox1ActionPerformed
 
     private void jScrollPane16ComponentShown(java.awt.event.ComponentEvent evt) {//GEN-FIRST:event_jScrollPane16ComponentShown
@@ -980,6 +1102,10 @@ public class MainForm extends javax.swing.JFrame {
     private void jScrollPane2ComponentShown(java.awt.event.ComponentEvent evt) {//GEN-FIRST:event_jScrollPane2ComponentShown
         wrapfillminortbl();
     }//GEN-LAST:event_jScrollPane2ComponentShown
+
+    private void jTabbedPane1MouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_jTabbedPane1MouseClicked
+        wrapfillminortbl();
+    }//GEN-LAST:event_jTabbedPane1MouseClicked
     /**
      * @param args the command line arguments
      */
@@ -1022,8 +1148,9 @@ public class MainForm extends javax.swing.JFrame {
     private javax.swing.JLabel jLabel2;
     private javax.swing.JLabel jLabel3;
     private javax.swing.JLabel jLabel4;
+    private javax.swing.JLabel jLabel5;
     private javax.swing.JPanel jPanel1;
-    private javax.swing.JPanel jPanel2;
+    private javax.swing.JPanel jPanel3;
     private javax.swing.JScrollPane jScrollPane1;
     private javax.swing.JScrollPane jScrollPane10;
     private javax.swing.JScrollPane jScrollPane11;
@@ -1032,6 +1159,7 @@ public class MainForm extends javax.swing.JFrame {
     private javax.swing.JScrollPane jScrollPane14;
     private javax.swing.JScrollPane jScrollPane15;
     private javax.swing.JScrollPane jScrollPane16;
+    private javax.swing.JScrollPane jScrollPane17;
     private javax.swing.JScrollPane jScrollPane18;
     private javax.swing.JScrollPane jScrollPane2;
     private javax.swing.JScrollPane jScrollPane3;
@@ -1041,6 +1169,7 @@ public class MainForm extends javax.swing.JFrame {
     private javax.swing.JScrollPane jScrollPane7;
     private javax.swing.JScrollPane jScrollPane8;
     private javax.swing.JScrollPane jScrollPane9;
+    private javax.swing.JSplitPane jSplitPane2;
     private javax.swing.JTabbedPane jTabbedPane1;
     private javax.swing.JTable jTable1;
     private javax.swing.JTable jTable10;
@@ -1063,5 +1192,6 @@ public class MainForm extends javax.swing.JFrame {
     private javax.swing.JTextField jTextField2;
     private javax.swing.JTextField jTextField3;
     private javax.swing.JTextField jTextField4;
+    private javax.swing.JTextField jTextField5;
     // End of variables declaration//GEN-END:variables
 }

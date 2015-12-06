@@ -957,9 +957,9 @@ public class MainForm extends javax.swing.JFrame {
         int selectedrownum = jTable1.getSelectedRow();
         if (selectedrownum >= 0) {
             int[] vals = {
-                Integer.parseInt(jTable1.getModel().getValueAt(selectedrownum, 1).toString().trim()),
-                Integer.parseInt(jTable1.getModel().getValueAt(selectedrownum, 2).toString().trim()),
-                Integer.parseInt(jTable1.getModel().getValueAt(selectedrownum, 3).toString().trim())
+                Integer.parseInt(jTable1.getModel().getValueAt(jTable1.convertRowIndexToModel(selectedrownum), 1).toString().trim()),
+                Integer.parseInt(jTable1.getModel().getValueAt(jTable1.convertRowIndexToModel(selectedrownum), 2).toString().trim()),
+                Integer.parseInt(jTable1.getModel().getValueAt(jTable1.convertRowIndexToModel(selectedrownum), 3).toString().trim())
             };
             fillminortbl(jTabbedPane1.getSelectedIndex(), vals);
         }

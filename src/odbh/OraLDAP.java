@@ -86,7 +86,7 @@ public class OraLDAP {
                 }
                 Matcher servicematcher = servicepattern.matcher(result.get(k));
                 if (servicematcher.find()){
-                    tnsservices.put(k.substring(3,k.length()).trim(),((servicematcher.group(1)==null)? servicematcher.group(2) : servicematcher.group(1)));
+                    tnsservices.put(k.substring(3,k.length()).trim(),((servicematcher.group(1)==null)? "/"+servicematcher.group(2) : ":"+servicematcher.group(1)));
                 }
             }
             sortedtnslines = new TreeMap<>(tnslines);

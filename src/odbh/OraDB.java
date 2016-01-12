@@ -72,6 +72,13 @@ public class OraDB {
                 if(mainstmt != null && !mainstmt.isClosed()){
                     mainstmt.close();
                 }
+                if(minorprepstmt!= null){
+                    for(PreparedStatement minorprepstmt1 : minorprepstmt){
+                        if(minorprepstmt1!=null && !minorprepstmt1.isClosed()){
+                            minorprepstmt1.close();
+                        }
+                    }
+                }
                 if(minorstmt != null){
                     for (Statement minorstmt1 : minorstmt) {
                         if(minorstmt1 != null && ! minorstmt1.isClosed()){
@@ -81,7 +88,7 @@ public class OraDB {
                 }
                 con.close();
             }
-            con = DriverManager.getConnection("jdbc:oracle:thin:@" + dbhost + ":"+ dbport +"/" + dbsrv, dbusername, dbpassword);
+            con = DriverManager.getConnection("jdbc:oracle:thin:@" + dbhost + ":"+ dbport + dbsrv, dbusername, dbpassword);
             return 0;
         } catch (Exception e) {
             System.out.println(e);

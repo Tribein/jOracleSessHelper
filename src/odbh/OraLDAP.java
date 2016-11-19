@@ -43,13 +43,13 @@ import java.util.Map;
  */
 
 public class OraLDAP {
-    LdapContext ldapctx;
-    HashMap <String,String> tnslines;
-    HashMap <String,String> tnsports;
-    HashMap <String,String> tnsservices;
-    Map <String, String> sortedtnslines;
+    LdapContext ldapCtx;
+    HashMap <String,String> tnsLines;
+    HashMap <String,String> tnsPort;
+    HashMap <String,String> tnsService;
+    Map <String, String> sortedTNSLines;
             
-    public int initmyldap(String ldaphost, String ldapport) {
+    public int initLDAP(String ldaphost, String ldapport) {
         if(ldaphost == null || ldapport==null){
             return 1;
         }              
@@ -57,7 +57,7 @@ public class OraLDAP {
         env.put(Context.INITIAL_CONTEXT_FACTORY,"com.sun.jndi.ldap.LdapCtxFactory");
         env.put(Context.PROVIDER_URL, "ldap://"+ldaphost+":"+ldapport);
         try{
-            ldapctx = new javax.naming.ldap.InitialLdapContext(env,null);        
+            ldapCtx = new javax.naming.ldap.InitialLdapContext(env,null);        
         }catch (Exception e) {
             System.out.println(e);
             return 1;
@@ -65,61 +65,61 @@ public class OraLDAP {
         return 0;
     }
     
-    public Map <String,String> gettnsrecs(){
-        String searchbase = "cn=OracleContext,DC=world";
-        String returnedattrs[] ={ "cn","orclNetDescString" };
+    public Map <String,String> getTNSRecs(){
+        String searchBase = "cn=OracleContext,DC=world";
+        String[] returnedAttrs ={ "cn","orclNetDescString" };
         String searchfilter = "(&(objectClass=orclNetService)(cn=*))";                
-        SearchControls searchctls = new SearchControls();
-        searchctls.setReturningAttributes(returnedattrs);
-        searchctls.setSearchScope(SearchControls.SUBTREE_SCOPE);
+        SearchControls searchCtls = new SearchControls();
+        searchCtls.setReturningAttributes(returnedAttrs);
+        searchCtls.setSearchScope(SearchControls.SUBTREE_SCOPE);
         HashMap <String,String> result = new HashMap<>();
         try{
-            NamingEnumeration<SearchResult> answer = ldapctx.search(searchbase, searchfilter, searchctls);
+            NamingEnumeration<SearchResult> answer = ldapCtx.search(searchBase, searchfilter, searchCtls);
             while (answer.hasMoreElements()) {
                 SearchResult sr = (SearchResult) answer.next();
                 Attributes attrs = sr.getAttributes();
                 if (attrs != null) {
-                    result.put(attrs.get(returnedattrs[0]).toString(),attrs.get(returnedattrs[1]).toString());
+                    result.put(attrs.get(returnedAttrs[0]).toString(),attrs.get(returnedAttrs[1]).toString());
                 }
-                ldapctx.close();
+                ldapCtx.close();
             }
         } catch (Exception e) {
             System.out.println(e);
             return null;
         }
         if ( ! result.isEmpty() ) {
-            Pattern hostpattern = Pattern.compile("host=([A-Za-z0-9\\.\\-\\_]+)");
-            Pattern portpattern = Pattern.compile("port=([0-9]{1,5})");
-            Pattern servicepattern = Pattern.compile("sid=([A-Za-z0-9\\-\\_]+)|service_name=([A-Za-z0-9\\-\\_]+)");
-            tnslines = new HashMap<>();
-            tnsports = new HashMap<>();
-            tnsservices = new HashMap<>();
+            Pattern hostPattern = Pattern.compile("host=([A-Za-z0-9\\.\\-\\_]+)");
+            Pattern portPattern = Pattern.compile("port=([0-9]{1,5})");
+            Pattern servicePattern = Pattern.compile("sid=([A-Za-z0-9\\-\\_]+)|service_name=([A-Za-z0-9\\-\\_]+)");
+            tnsLines = new HashMap<>();
+            tnsPort = new HashMap<>();
+            tnsService = new HashMap<>();
             Set<String> keys = result.keySet();
             for (String k : keys){
-                Matcher hostmatcher = hostpattern.matcher(result.get(k));
-                if (hostmatcher.find()){
-                    tnslines.put(k.substring(3,k.length()).trim(),hostmatcher.group(1));
+                Matcher hostMatcher = hostPattern.matcher(result.get(k));
+                if (hostMatcher.find()){
+                    tnsLines.put(k.substring(3,k.length()).trim(),hostMatcher.group(1));
                 }                
-                Matcher portmatcher = portpattern.matcher(result.get(k));
-                if (portmatcher.find()){
-                    tnsports.put(k.substring(3,k.length()).trim(),portmatcher.group(1));
+                Matcher portMatcher = portPattern.matcher(result.get(k));
+                if (portMatcher.find()){
+                    tnsPort.put(k.substring(3,k.length()).trim(),portMatcher.group(1));
                 }
-                Matcher servicematcher = servicepattern.matcher(result.get(k));
-                if (servicematcher.find()){
-                    tnsservices.put(k.substring(3,k.length()).trim(),((servicematcher.group(1)==null)? "/"+servicematcher.group(2) : ":"+servicematcher.group(1)));
+                Matcher serviceMatcher = servicePattern.matcher(result.get(k));
+                if (serviceMatcher.find()){
+                    tnsService.put(k.substring(3,k.length()).trim(),((serviceMatcher.group(1)==null)? "/"+serviceMatcher.group(2) : ":"+serviceMatcher.group(1)));
                 }
             }
-            sortedtnslines = new TreeMap<>(tnslines);
+            sortedTNSLines = new TreeMap<>(tnsLines);
         } else {
             System.out.println("No attributes!");
         }
-        return sortedtnslines;
+        return sortedTNSLines;
     }
     
-    public Map <String,String> gettnsports(){
-        return tnsports;
+    public Map <String,String> getTNSPorts(){
+        return tnsPort;
     }    
-    public Map <String,String> gettnsservices(){
-        return tnsservices;
+    public Map <String,String> getTNSServices(){
+        return tnsService;
     }        
 }

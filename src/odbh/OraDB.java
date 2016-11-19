@@ -33,9 +33,9 @@ import java.sql.*;
  */
 public class OraDB {
 
-    String mainquery = 
+    String mainQuery = 
 "select rownum, z.* from (WITH d AS (SELECT a.inst_id, a.sid, a.serial# serial, a.status, COALESCE(a.username,b.pname,'N/A') username, NVL(b.pname,'N/A') process, NVL(module,'N/A') module, NVL(a.machine,'N/A') machine, DECODE(a.blocking_session_status,'UNKNOWN',-1,a.blocking_session) blocked_by, DECODE(a.blocking_session_status,'UNKNOWN',-1,a.blocking_instance) blocking_instance, c.blocked, a.type, ROUND(b.pga_used_mem /1024/1024,3) pga_used_mb, ROUND(b.pga_alloc_mem/1024/1024,3) pga_alloc_mb, ROUND(b.pga_max_mem /1024/1024,3) pga_max_mb, TO_CHAR(a.logon_time,'YYYY.MM.DD HH24:MI:SS') logon_time, a.state, ROUND(DECODE(a.state,'WAITED KNOWN TIME',a.time_since_last_wait_micro,'WAITED SHORT TIME',a.time_since_last_wait_micro,a.wait_time_micro)/1000000,3) seconds, DECODE(a.state,'WAITED KNOWN TIME','ON CPU','WAITED SHORT TIME','ON CPU',a.event) \"EVENT\" FROM gv$session a LEFT JOIN gv$process b ON (a.paddr =b.addr AND a.inst_id=b.inst_id) LEFT JOIN (SELECT blocking_instance,  blocking_session,  COUNT(sid) blocked FROM gv$session WHERE blocking_session IS NOT NULL GROUP BY blocking_instance,  blocking_session ) c ON (a.sid =c.blocking_session AND a.inst_id=c.blocking_instance) ORDER BY blocked DESC nulls last )  SELECT inst_id, DECODE(level,1,TO_CHAR(sid),lpad(sid,2*level+LENGTH(TO_CHAR(sid)),' ')) sid, serial, status, username, process, module, machine, logon_time, state, event, seconds, pga_used_mb, pga_alloc_mb, pga_max_mb, type  FROM d START WITH d.blocked IS NOT NULL  AND (d.blocked_by IS NULL or d.blocked_by = -1) CONNECT BY prior trim(d.inst_id ||' ' ||d.sid)=trim(d.blocking_instance ||' ' ||d.blocked_by)  UNION ALL  SELECT *  FROM (SELECT inst_id, TO_CHAR(sid), serial, status, username, process, module, machine, logon_time, state, event,	 seconds, pga_used_mb, pga_alloc_mb, pga_max_mb, type FROM d WHERE blocked_by IS NULL AND blocked  IS NULL ORDER BY type DESC, status ASC, d.sid ASC, inst_id ASC )) z";
-    String [] minorquery = {
+    String [] minorQuery = {
 //WAITS
 "select seq#,   decode(state,'WAITED SHORT TIME','ON CPU','WAITED KNOWN TIME','ON CPU',event) \"EVENT\",   decode(state,'WAITED SHORT TIME',0,'WAITED KNOWN TIME',0,p1) \"P1\",   decode(state,'WAITED SHORT TIME','--','WAITED KNOWN TIME','--',p1text) \"P1TEXT\",   decode(state,'WAITED SHORT TIME',0,'WAITED KNOWN TIME',0,p2) \"P2\",   decode(state,'WAITED SHORT TIME','--','WAITED KNOWN TIME','--',p2text) \"P2TEXT\",   decode(state,'WAITED SHORT TIME',0,'WAITED KNOWN TIME',0,p3) \"P3\",   decode(state,'WAITED SHORT TIME','--','WAITED KNOWN TIME','--',p3text) \"P3TEXT\",   round(decode(state,'WAITED SHORT TIME',time_since_last_wait_micro,'WAITED KNOWN TIME',time_since_last_wait_micro,wait_time_micro)/1000000,3) \"WAIT_TIME\",   time_since_last_wait_micro from gv$session_wait where inst_id  = ? and sid= ? union all select seq#,   event,   p1,   p1text,   p2,   p2text,   p3,   p3text,   round(wait_time_micro/1000000,3),   time_since_last_wait_micro from gv$session_wait_history where inst_id = ? and sid = ? ",
 //EVENTS
@@ -69,19 +69,19 @@ public class OraDB {
 //SQLMON
 "select dbms_sqltune.report_sql_monitor(inst_id => ?, session_id => ? ,session_serial => ? ,type => 'TEXT',report_level => 'ALL') as report from dual"
 };
-    String dbusername = "dbsnmp";
-    String dbpassword = "dbsnmp";
-    String dbsrv = "";
-    String dbhost = "";
-    String dbport = "";
+    String dbUsername = "dbsnmp";
+    String dbPassword = "dbsnmp";
+    String dbService = "";
+    String dbHostname = "";
+    String dbPort = "";
     Connection con;
-    Statement mainstmt;
-    Statement [] minorstmt;
-    PreparedStatement [] minorprepstmt;  
-    Object[][] retval;
+    Statement mainStatement;
+    Statement [] minorStatement;
+    PreparedStatement [] minorPreparedStatement;  
+    Object[][] retVal;
 
     public OraDB() {
-        this.minorprepstmt = new PreparedStatement[16];
+        this.minorPreparedStatement = new PreparedStatement[16];
     }
 
     public int initmyjdb(String dbhost, String dbsrv, String dbusername, String dbpassword, String dbport) {
@@ -89,20 +89,20 @@ public class OraDB {
         try {
             Class.forName("oracle.jdbc.driver.OracleDriver");
             if(con != null && !con.isClosed()){
-                if(mainstmt != null && !mainstmt.isClosed()){
-                    mainstmt.close();
+                if(mainStatement != null && !mainStatement.isClosed()){
+                    mainStatement.close();
                 }
-                if(minorprepstmt!= null){
-                    for(PreparedStatement minorprepstmt1 : minorprepstmt){
-                        if(minorprepstmt1!=null && !minorprepstmt1.isClosed()){
-                            minorprepstmt1.close();
+                if(minorPreparedStatement!= null){
+                    for(PreparedStatement minorPrepStmt : minorPreparedStatement){
+                        if(minorPrepStmt!=null && !minorPrepStmt.isClosed()){
+                            minorPrepStmt.close();
                         }
                     }
                 }
-                if(minorstmt != null){
-                    for (Statement minorstmt1 : minorstmt) {
-                        if(minorstmt1 != null && ! minorstmt1.isClosed()){
-                            minorstmt1.close();
+                if(minorStatement != null){
+                    for (Statement minorStmt : minorStatement) {
+                        if(minorStmt != null && ! minorStmt.isClosed()){
+                            minorStmt.close();
                         }
                     }
                 }
@@ -116,50 +116,50 @@ public class OraDB {
         }
     }
 
-    public Object[][] mainquery() {
-        ResultSet mainrs;
+    public Object[][] mainQuery() {
+        ResultSet mainRS;
         try {
-        if(mainstmt == null || mainstmt.isClosed()){
-            mainstmt = con.createStatement(ResultSet.TYPE_SCROLL_SENSITIVE, ResultSet.CONCUR_READ_ONLY);
+        if(mainStatement == null || mainStatement.isClosed()){
+            mainStatement = con.createStatement(ResultSet.TYPE_SCROLL_SENSITIVE, ResultSet.CONCUR_READ_ONLY);
         }    
-        mainrs = mainstmt.executeQuery(mainquery);
-        ResultSetMetaData mainrsmd = mainrs.getMetaData();
-        int mainrscolcount = mainrsmd.getColumnCount();
-        int mainrsrowcount;
-        if (mainrs.last()) {
-            mainrsrowcount = mainrs.getRow();
-            mainrs.beforeFirst();
+        mainRS = mainStatement.executeQuery(mainQuery);
+        ResultSetMetaData mainrsmd = mainRS.getMetaData();
+        int mainRSColCount = mainrsmd.getColumnCount();
+        int mainRSRowsCount;
+        if (mainRS.last()) {
+            mainRSRowsCount = mainRS.getRow();
+            mainRS.beforeFirst();
         } else {
-            mainrsrowcount = 0;
+            mainRSRowsCount = 0;
         }
-        retval = new Object[mainrsrowcount][mainrscolcount];
+        retVal = new Object[mainRSRowsCount][mainRSColCount];
         int j = 0;
-        while (mainrs.next()) {
-            for (int i = 1; i <= mainrscolcount; i++) {
+        while (mainRS.next()) {
+            for (int i = 1; i <= mainRSColCount; i++) {
                 switch(i){
                     case 1://ROWNUM
-                        retval[j][i - 1] = mainrs.getInt(i);
+                        retVal[j][i - 1] = mainRS.getInt(i);
                         break;
                     case 2://INST_ID
-                        retval[j][i - 1] = mainrs.getInt(i);
+                        retVal[j][i - 1] = mainRS.getInt(i);
                         break;
                     case 4://SERIAL
-                        retval[j][i - 1] = mainrs.getInt(i);
+                        retVal[j][i - 1] = mainRS.getInt(i);
                         break;                        
                     case 13://SECONDS
-                        retval[j][i - 1] = mainrs.getFloat(i);
+                        retVal[j][i - 1] = mainRS.getFloat(i);
                         break;                                                
                     case 14://PGA_USED_MEM
-                        retval[j][i - 1] = mainrs.getFloat(i);
+                        retVal[j][i - 1] = mainRS.getFloat(i);
                         break;                                
                     case 15://PGA_ALLOC_MEM
-                        retval[j][i - 1] = mainrs.getFloat(i);
+                        retVal[j][i - 1] = mainRS.getFloat(i);
                         break;                                
                     case 16://PGA_MAX_MEM
-                        retval[j][i - 1] = mainrs.getFloat(i);
+                        retVal[j][i - 1] = mainRS.getFloat(i);
                         break;                                                        
                     default:
-                        retval[j][i - 1] = mainrs.getString(i);
+                        retVal[j][i - 1] = mainRS.getString(i);
                         break;
                 }   
             }
@@ -168,75 +168,75 @@ public class OraDB {
         } catch (Exception e) {
             System.out.println(e);
         }
-        return retval;
+        return retVal;
     }
 
-    public Object [][] minorquery(int tabid, int [] inp ){
-        ResultSet minorrs;
-        int minorrscolcount,minorrsrowcount;
+    public Object [][] minorQuery(int tabID, int [] inp ){
+        ResultSet minorRS;
+        int minorRSColCount,minorRSRowsCount;
         try {
-        if( minorprepstmt[tabid]==null || minorprepstmt[tabid].isClosed()){
-            minorprepstmt[tabid] = con.prepareStatement(minorquery[tabid],ResultSet.TYPE_SCROLL_SENSITIVE, ResultSet.CONCUR_READ_ONLY);
+        if( minorPreparedStatement[tabID]==null || minorPreparedStatement[tabID].isClosed()){
+            minorPreparedStatement[tabID] = con.prepareStatement(minorQuery[tabID],ResultSet.TYPE_SCROLL_SENSITIVE, ResultSet.CONCUR_READ_ONLY);
         }
-        switch(tabid){
+        switch(tabID){
             case 0://WAITS
-                minorprepstmt[tabid].setInt(1, inp[0]);
-                minorprepstmt[tabid].setInt(3, inp[0]);
-                minorprepstmt[tabid].setInt(2, inp[1]);
-                minorprepstmt[tabid].setInt(4, inp[1]);
+                minorPreparedStatement[tabID].setInt(1, inp[0]);
+                minorPreparedStatement[tabID].setInt(3, inp[0]);
+                minorPreparedStatement[tabID].setInt(2, inp[1]);
+                minorPreparedStatement[tabID].setInt(4, inp[1]);
                 break;
             case 7://SQL
-                minorprepstmt[tabid].setInt(1, inp[0]);
-                minorprepstmt[tabid].setInt(3, inp[0]);
-                minorprepstmt[tabid].setInt(2, inp[1]);
-                minorprepstmt[tabid].setInt(4, inp[1]);
+                minorPreparedStatement[tabID].setInt(1, inp[0]);
+                minorPreparedStatement[tabID].setInt(3, inp[0]);
+                minorPreparedStatement[tabID].setInt(2, inp[1]);
+                minorPreparedStatement[tabID].setInt(4, inp[1]);
                 break; 
             case 11://LOCKS
-                minorprepstmt[tabid].setInt(1, inp[0]);
-                minorprepstmt[tabid].setInt(3, inp[0]);
-                minorprepstmt[tabid].setInt(5, inp[0]);
-                minorprepstmt[tabid].setInt(2, inp[1]);
-                minorprepstmt[tabid].setInt(4, inp[1]);
-                minorprepstmt[tabid].setInt(6, inp[1]);
+                minorPreparedStatement[tabID].setInt(1, inp[0]);
+                minorPreparedStatement[tabID].setInt(3, inp[0]);
+                minorPreparedStatement[tabID].setInt(5, inp[0]);
+                minorPreparedStatement[tabID].setInt(2, inp[1]);
+                minorPreparedStatement[tabID].setInt(4, inp[1]);
+                minorPreparedStatement[tabID].setInt(6, inp[1]);
                 break;                 
             case 12://PQ
-                minorprepstmt[tabid].setInt(1, inp[0]);
-                minorprepstmt[tabid].setInt(3, inp[0]);
-                minorprepstmt[tabid].setInt(2, inp[1]);
-                minorprepstmt[tabid].setInt(4, inp[1]);
+                minorPreparedStatement[tabID].setInt(1, inp[0]);
+                minorPreparedStatement[tabID].setInt(3, inp[0]);
+                minorPreparedStatement[tabID].setInt(2, inp[1]);
+                minorPreparedStatement[tabID].setInt(4, inp[1]);
                 break; 
             case 15://SQLMON
-                minorprepstmt[tabid].setInt(1, inp[0]);
-                minorprepstmt[tabid].setInt(2, inp[1]);
-                minorprepstmt[tabid].setInt(3, inp[2]);
+                minorPreparedStatement[tabID].setInt(1, inp[0]);
+                minorPreparedStatement[tabID].setInt(2, inp[1]);
+                minorPreparedStatement[tabID].setInt(3, inp[2]);
                 break;                
             default:
-                minorprepstmt[tabid].setInt(1, inp[0]);
-                minorprepstmt[tabid].setInt(2, inp[1]);
+                minorPreparedStatement[tabID].setInt(1, inp[0]);
+                minorPreparedStatement[tabID].setInt(2, inp[1]);
                 break;
         }
-        minorprepstmt[tabid].execute();
-        minorrs = minorprepstmt[tabid].getResultSet();
-        ResultSetMetaData minorrsmd = minorrs.getMetaData();
-        minorrscolcount = minorrsmd.getColumnCount();
-        if (minorrs.last()) {
-            minorrsrowcount = minorrs.getRow();
-            minorrs.beforeFirst();
+        minorPreparedStatement[tabID].execute();
+        minorRS = minorPreparedStatement[tabID].getResultSet();
+        ResultSetMetaData minorRSMetaData = minorRS.getMetaData();
+        minorRSColCount = minorRSMetaData.getColumnCount();
+        if (minorRS.last()) {
+            minorRSRowsCount = minorRS.getRow();
+            minorRS.beforeFirst();
         } else {
-            minorrsrowcount = 0;
+            minorRSRowsCount = 0;
         }
-        if(minorrsrowcount==0 || minorrscolcount==0){
+        if(minorRSRowsCount==0 || minorRSColCount==0){
             return null;
         }else{
-            retval = new Object[minorrsrowcount][minorrscolcount];
+            retVal = new Object[minorRSRowsCount][minorRSColCount];
             int j = 0;
-            while (minorrs.next()) {
-                for (int i = 1; i <= minorrscolcount; i++) {
-                    retval[j][i - 1] = minorrs.getString(i);
+            while (minorRS.next()) {
+                for (int i = 1; i <= minorRSColCount; i++) {
+                    retVal[j][i - 1] = minorRS.getString(i);
                 }
                 j++;
             }
-            return retval;        
+            return retVal;        
         }
         } catch (Exception e) {
             System.out.println(e);

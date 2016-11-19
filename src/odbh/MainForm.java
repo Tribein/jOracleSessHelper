@@ -41,73 +41,73 @@ import java.util.Comparator;
  */
 public class MainForm extends javax.swing.JFrame {
 
-    OraDB myjdb;
-    OraLDAP myldap;
-    javax.swing.table.DefaultTableModel maintblmodel;
-    javax.swing.table.DefaultTableModel[] minortblmodel;
-    boolean minortblrefreshed;
-    Map<String, String> myldaplist;
-    Map<String, String> myldapport;
-    Map<String, String> myldapservice;
+    OraDB oraDBInst;
+    OraLDAP ldapInst;
+    javax.swing.table.DefaultTableModel mainTableModel;
+    javax.swing.table.DefaultTableModel[] minorTableModel;
+    boolean minorTableRefreshed;
+    Map<String, String> ldapList;
+    Map<String, String> ldapPort;
+    Map<String, String> ldapService;
 
     /**
      * Creates new form MainForm
      */
     public MainForm() {
 
-        this.minortblmodel = new javax.swing.table.DefaultTableModel[15];
-        this.myjdb = new OraDB();
-        this.myldap = new OraLDAP();
-        this.myldaplist = new TreeMap<>();
-        this.myldapport = new TreeMap<>();
-        this.myldapservice = new TreeMap<>();
+        this.minorTableModel = new javax.swing.table.DefaultTableModel[15];
+        this.oraDBInst = new OraDB();
+        this.ldapInst = new OraLDAP();
+        this.ldapList = new TreeMap<>();
+        this.ldapPort = new TreeMap<>();
+        this.ldapService = new TreeMap<>();
 
         initComponents();
 
         //Initialize LDAP
-        if (this.myldap.initmyldap("ldaphost.example.org"/*host*/,"389"/*port*/) == 0) {
+        if (this.ldapInst.initLDAP("ldap.example.org"/*host*/,"389"/*port*/) == 0) {
 
-            this.myldaplist = myldap.gettnsrecs();
-            this.myldapport = myldap.gettnsports();
-            this.myldapservice = myldap.gettnsservices();
+            this.ldapList = ldapInst.getTNSRecs();
+            this.ldapPort = ldapInst.getTNSPorts();
+            this.ldapService = ldapInst.getTNSServices();
         }
         //
-        if (!myldaplist.isEmpty()) {
-            for(Map.Entry<String, String> k : this.myldaplist.entrySet()){
+        if (!ldapList.isEmpty()) {
+            for(Map.Entry<String, String> k : this.ldapList.entrySet()){
                 jComboBox1.addItem(k.getKey());
             }                    
         }
         //
-        jTextField1.setText(this.myjdb.dbhost);
-        jTextField2.setText(this.myjdb.dbsrv);
-        jTextField3.setText(this.myjdb.dbusername);
-        jTextField4.setText(this.myjdb.dbpassword);
-        jTextField5.setText(this.myjdb.dbport);
+        jTextField1.setText(this.oraDBInst.dbHostname);
+        jTextField2.setText(this.oraDBInst.dbService);
+        jTextField3.setText(this.oraDBInst.dbUsername);
+        jTextField4.setText(this.oraDBInst.dbPassword);
+        jTextField5.setText(this.oraDBInst.dbPort);
         //
-        this.maintblmodel = (javax.swing.table.DefaultTableModel) jTable1.getModel();
-        this.minortblmodel[0] = (javax.swing.table.DefaultTableModel) jTable2.getModel();
-        this.minortblmodel[1] = (javax.swing.table.DefaultTableModel) jTable3.getModel();
-        this.minortblmodel[2] = (javax.swing.table.DefaultTableModel) jTable4.getModel();
-        this.minortblmodel[3] = (javax.swing.table.DefaultTableModel) jTable5.getModel();
-        this.minortblmodel[4] = (javax.swing.table.DefaultTableModel) jTable6.getModel();
-        this.minortblmodel[5] = (javax.swing.table.DefaultTableModel) jTable7.getModel();
-        this.minortblmodel[6] = (javax.swing.table.DefaultTableModel) jTable8.getModel();
-        this.minortblmodel[7] = (javax.swing.table.DefaultTableModel) jTable9.getModel();
-        this.minortblmodel[8] = (javax.swing.table.DefaultTableModel) jTable10.getModel();
-        this.minortblmodel[9] = (javax.swing.table.DefaultTableModel) jTable11.getModel();
-        this.minortblmodel[10] = (javax.swing.table.DefaultTableModel) jTable12.getModel();
-        this.minortblmodel[11] = (javax.swing.table.DefaultTableModel) jTable13.getModel();
-        this.minortblmodel[12] = (javax.swing.table.DefaultTableModel) jTable14.getModel();
-        this.minortblmodel[13] = (javax.swing.table.DefaultTableModel) jTable15.getModel();
-        this.minortblmodel[14] = (javax.swing.table.DefaultTableModel) jTable16.getModel();
+        this.mainTableModel = (javax.swing.table.DefaultTableModel) jTable1.getModel();
+        this.minorTableModel[0] = (javax.swing.table.DefaultTableModel) jTable2.getModel();
+        this.minorTableModel[1] = (javax.swing.table.DefaultTableModel) jTable3.getModel();
+        this.minorTableModel[2] = (javax.swing.table.DefaultTableModel) jTable4.getModel();
+        this.minorTableModel[3] = (javax.swing.table.DefaultTableModel) jTable5.getModel();
+        this.minorTableModel[4] = (javax.swing.table.DefaultTableModel) jTable6.getModel();
+        this.minorTableModel[5] = (javax.swing.table.DefaultTableModel) jTable7.getModel();
+        this.minorTableModel[6] = (javax.swing.table.DefaultTableModel) jTable8.getModel();
+        this.minorTableModel[7] = (javax.swing.table.DefaultTableModel) jTable9.getModel();
+        this.minorTableModel[8] = (javax.swing.table.DefaultTableModel) jTable10.getModel();
+        this.minorTableModel[9] = (javax.swing.table.DefaultTableModel) jTable11.getModel();
+        this.minorTableModel[10] = (javax.swing.table.DefaultTableModel) jTable12.getModel();
+        this.minorTableModel[11] = (javax.swing.table.DefaultTableModel) jTable13.getModel();
+        this.minorTableModel[12] = (javax.swing.table.DefaultTableModel) jTable14.getModel();
+        this.minorTableModel[13] = (javax.swing.table.DefaultTableModel) jTable15.getModel();
+        this.minorTableModel[14] = (javax.swing.table.DefaultTableModel) jTable16.getModel();
         //
         jTable1.getSelectionModel().addListSelectionListener(new ListSelectionListener() {
 
             @Override
             public void valueChanged(ListSelectionEvent lse) {
                 //throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
-                wrapfillminortbl();
-                minortblrefreshed = true;
+                wrapFillMinorTable();
+                minorTableRefreshed = true;
             }
         });
         //
@@ -979,7 +979,7 @@ public class MainForm extends javax.swing.JFrame {
         pack();
     }// </editor-fold>//GEN-END:initComponents
 
-    private void wrapfillminortbl() {
+    private void wrapFillMinorTable() {
         int selectedrownum = jTable1.getSelectedRow();
         if (selectedrownum >= 0) {
             int[] vals = {
@@ -987,47 +987,47 @@ public class MainForm extends javax.swing.JFrame {
                 Integer.parseInt(jTable1.getModel().getValueAt(jTable1.convertRowIndexToModel(selectedrownum), 2).toString().trim()),
                 Integer.parseInt(jTable1.getModel().getValueAt(jTable1.convertRowIndexToModel(selectedrownum), 3).toString().trim())
             };
-            fillminortbl(jTabbedPane1.getSelectedIndex(), vals);
+            fillMinorTable(jTabbedPane1.getSelectedIndex(), vals);
         }
     }
 
-    private void fillmaintbl() {
+    private void fillMainTable() {
         int mytblrowscount;
         Object[][] result;
-        mytblrowscount = maintblmodel.getRowCount();
+        mytblrowscount = mainTableModel.getRowCount();
         for (int i = mytblrowscount - 1; i >= 0; i--) {
-            maintblmodel.removeRow(i);
+            mainTableModel.removeRow(i);
         }
-        result = myjdb.mainquery();
+        result = oraDBInst.mainQuery();
         for (Object[] result1 : result) {
-            maintblmodel.addRow(result1);
+            mainTableModel.addRow(result1);
         }
     }
 
-    private void fillminortbl(int tabid, int[] inp) {
-        int mytblrowscount;
+    private void fillMinorTable(int tabID, int[] inp) {
+        int tableRowsCounter;
         Object[][] result;
 
-        switch (tabid) {
+        switch (tabID) {
             case 15:
                 jTextArea1.setText("");
                 break;
             default:
-                mytblrowscount = minortblmodel[tabid].getRowCount();
-                for (int i = mytblrowscount - 1; i >= 0; i--) {
-                    minortblmodel[tabid].removeRow(i);
+                tableRowsCounter = minorTableModel[tabID].getRowCount();
+                for (int i = tableRowsCounter - 1; i >= 0; i--) {
+                    minorTableModel[tabID].removeRow(i);
                 }
                 break;
         }
-        result = myjdb.minorquery(tabid, inp);
+        result = oraDBInst.minorQuery(tabID, inp);
         if (result != null) {
             for (Object[] r : result) {
-                switch (tabid) {
+                switch (tabID) {
                     case 15://SQLMONITOR
                         jTextArea1.setText(r[0].toString());
                         break;
                     default:
-                        minortblmodel[tabid].addRow(r);
+                        minorTableModel[tabID].addRow(r);
                         break;
                 }
             }
@@ -1035,103 +1035,103 @@ public class MainForm extends javax.swing.JFrame {
     }
 
     private void jButton1ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButton1ActionPerformed
-        if (myjdb.initmyjdb(jTextField1.getText(), ((jComboBox2.getSelectedIndex()==0)? ":" : "/" ) + jTextField2.getText(), jTextField3.getText(), jTextField4.getText(), jTextField5.getText()) == 0) {
-            fillmaintbl();
+        if (oraDBInst.initmyjdb(jTextField1.getText(), ((jComboBox2.getSelectedIndex()==0)? ":" : "/" ) + jTextField2.getText(), jTextField3.getText(), jTextField4.getText(), jTextField5.getText()) == 0) {
+            fillMainTable();
         }
     }//GEN-LAST:event_jButton1ActionPerformed
 
     private void jTable1MouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_jTable1MouseClicked
-        if (minortblrefreshed) {
-            minortblrefreshed = false;
+        if (minorTableRefreshed) {
+            minorTableRefreshed = false;
         } else {
-            wrapfillminortbl();
+            wrapFillMinorTable();
         }
     }//GEN-LAST:event_jTable1MouseClicked
 
     private void jButton2ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButton2ActionPerformed
 
         int tabid = jTabbedPane1.getSelectedIndex();
-        int selectedrownum = jTable1.getSelectedRow();
-        fillmaintbl();
-        if (selectedrownum >= 0) {
+        int selectedRowNumber = jTable1.getSelectedRow();
+        fillMainTable();
+        if (selectedRowNumber >= 0) {
             int[] vals = {
-                Integer.parseInt(jTable1.getModel().getValueAt(selectedrownum, 0).toString().trim()),
-                Integer.parseInt(jTable1.getModel().getValueAt(selectedrownum, 1).toString().trim()),
-                Integer.parseInt(jTable1.getModel().getValueAt(selectedrownum, 2).toString().trim())
+                Integer.parseInt(jTable1.getModel().getValueAt(selectedRowNumber, 0).toString().trim()),
+                Integer.parseInt(jTable1.getModel().getValueAt(selectedRowNumber, 1).toString().trim()),
+                Integer.parseInt(jTable1.getModel().getValueAt(selectedRowNumber, 2).toString().trim())
             };
-            fillminortbl(tabid, vals);
+            fillMinorTable(tabid, vals);
         }
     }//GEN-LAST:event_jButton2ActionPerformed
 
     private void formComponentShown(java.awt.event.ComponentEvent evt) {//GEN-FIRST:event_formComponentShown
-        wrapfillminortbl();
+        wrapFillMinorTable();
     }//GEN-LAST:event_formComponentShown
 
     private void jComboBox1ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jComboBox1ActionPerformed
-        jTextField1.setText(this.myldaplist.get(jComboBox1.getSelectedItem().toString()));
-        jTextField2.setText(this.myldapservice.get(jComboBox1.getSelectedItem().toString()).substring(1));       
-        jTextField5.setText(this.myldapport.get(jComboBox1.getSelectedItem().toString()));
-        jComboBox2.setSelectedIndex((this.myldapservice.get(jComboBox1.getSelectedItem().toString()).substring(0,1).equals(":"))? 0:1);
+        jTextField1.setText(this.ldapList.get(jComboBox1.getSelectedItem().toString()));
+        jTextField2.setText(this.ldapService.get(jComboBox1.getSelectedItem().toString()).substring(1));       
+        jTextField5.setText(this.ldapPort.get(jComboBox1.getSelectedItem().toString()));
+        jComboBox2.setSelectedIndex((this.ldapService.get(jComboBox1.getSelectedItem().toString()).substring(0,1).equals(":"))? 0:1);
     }//GEN-LAST:event_jComboBox1ActionPerformed
 
     private void jScrollPane16ComponentShown(java.awt.event.ComponentEvent evt) {//GEN-FIRST:event_jScrollPane16ComponentShown
-        wrapfillminortbl();
+        wrapFillMinorTable();
     }//GEN-LAST:event_jScrollPane16ComponentShown
 
     private void jScrollPane15ComponentShown(java.awt.event.ComponentEvent evt) {//GEN-FIRST:event_jScrollPane15ComponentShown
-        wrapfillminortbl();
+        wrapFillMinorTable();
     }//GEN-LAST:event_jScrollPane15ComponentShown
 
     private void jScrollPane14ComponentShown(java.awt.event.ComponentEvent evt) {//GEN-FIRST:event_jScrollPane14ComponentShown
-        wrapfillminortbl();
+        wrapFillMinorTable();
     }//GEN-LAST:event_jScrollPane14ComponentShown
 
     private void jScrollPane13ComponentShown(java.awt.event.ComponentEvent evt) {//GEN-FIRST:event_jScrollPane13ComponentShown
-        wrapfillminortbl();
+        wrapFillMinorTable();
     }//GEN-LAST:event_jScrollPane13ComponentShown
 
     private void jScrollPane12ComponentShown(java.awt.event.ComponentEvent evt) {//GEN-FIRST:event_jScrollPane12ComponentShown
-        wrapfillminortbl();
+        wrapFillMinorTable();
     }//GEN-LAST:event_jScrollPane12ComponentShown
 
     private void jScrollPane11ComponentShown(java.awt.event.ComponentEvent evt) {//GEN-FIRST:event_jScrollPane11ComponentShown
-        wrapfillminortbl();
+        wrapFillMinorTable();
     }//GEN-LAST:event_jScrollPane11ComponentShown
 
     private void jScrollPane10ComponentShown(java.awt.event.ComponentEvent evt) {//GEN-FIRST:event_jScrollPane10ComponentShown
-        wrapfillminortbl();
+        wrapFillMinorTable();
     }//GEN-LAST:event_jScrollPane10ComponentShown
 
     private void jScrollPane9ComponentShown(java.awt.event.ComponentEvent evt) {//GEN-FIRST:event_jScrollPane9ComponentShown
-        wrapfillminortbl();
+        wrapFillMinorTable();
     }//GEN-LAST:event_jScrollPane9ComponentShown
 
     private void jScrollPane7ComponentShown(java.awt.event.ComponentEvent evt) {//GEN-FIRST:event_jScrollPane7ComponentShown
-        wrapfillminortbl();
+        wrapFillMinorTable();
     }//GEN-LAST:event_jScrollPane7ComponentShown
 
     private void jScrollPane6ComponentShown(java.awt.event.ComponentEvent evt) {//GEN-FIRST:event_jScrollPane6ComponentShown
-        wrapfillminortbl();
+        wrapFillMinorTable();
     }//GEN-LAST:event_jScrollPane6ComponentShown
 
     private void jScrollPane5ComponentShown(java.awt.event.ComponentEvent evt) {//GEN-FIRST:event_jScrollPane5ComponentShown
-        wrapfillminortbl();
+        wrapFillMinorTable();
     }//GEN-LAST:event_jScrollPane5ComponentShown
 
     private void jScrollPane4ComponentShown(java.awt.event.ComponentEvent evt) {//GEN-FIRST:event_jScrollPane4ComponentShown
-        wrapfillminortbl();
+        wrapFillMinorTable();
     }//GEN-LAST:event_jScrollPane4ComponentShown
 
     private void jScrollPane3ComponentShown(java.awt.event.ComponentEvent evt) {//GEN-FIRST:event_jScrollPane3ComponentShown
-        wrapfillminortbl();
+        wrapFillMinorTable();
     }//GEN-LAST:event_jScrollPane3ComponentShown
 
     private void jScrollPane2ComponentShown(java.awt.event.ComponentEvent evt) {//GEN-FIRST:event_jScrollPane2ComponentShown
-        wrapfillminortbl();
+        wrapFillMinorTable();
     }//GEN-LAST:event_jScrollPane2ComponentShown
 
     private void jTabbedPane1MouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_jTabbedPane1MouseClicked
-        wrapfillminortbl();
+        wrapFillMinorTable();
     }//GEN-LAST:event_jTabbedPane1MouseClicked
 
     private void jComboBox2ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jComboBox2ActionPerformed
